@@ -64,10 +64,10 @@ function get_program(::Type{RenderSurface})
 end
 
 function draw(s::RenderSurface)
-    GUI.bind(s.program)
-    GUI.bind(s.texture)
-    GUI.bind(s.va)
-    GUI.draw(s.va)
+    bind(s.program)
+    bind(s.texture)
+    bind(s.va)
+    draw(s.va)
 end
 
 function resize!(s::RenderSurface, new_res)
