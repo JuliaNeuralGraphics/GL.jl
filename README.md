@@ -3,7 +3,9 @@
 ## Install
 
 ```bash
-]add https://github.com/JuliaNeuralGraphics/GL.jl.git
+git clone https://github.com/JuliaNeuralGraphics/GL.jl.git
+cd GL.jl
+julia --project=.
 ]instantiate
 ```
 
