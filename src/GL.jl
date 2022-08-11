@@ -58,15 +58,6 @@ const Vec3f0 = SVector{3, Float32}
 const Vec4f0 = SVector{4, Float32}
 const Mat4x4f0 = SMatrix{4, 4, Float32}
 
-include("shader.jl")
-include("buffers.jl")
-include("texture.jl")
-
-include("quad.jl")
-include("bounding_box.jl")
-include("line.jl")
-include("frustum.jl")
-
 function look_at(position, target, up)
     Z = normalize(position - target)
     X  = normalize(normalize(up) × Z)
