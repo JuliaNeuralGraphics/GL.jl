@@ -22,7 +22,6 @@ function gl_eltype(b::BufferElement)
     error("Failed to get OpenGL type for $T")
 end
 
-
 struct BufferLayout
     elements::Vector{BufferElement}
     stride::UInt32
@@ -42,25 +41,54 @@ function calculate_offset!(elements)
     offset
 end
 
-struct VertexBuffer
+struct VertexBuffer{T}
     id::UInt32
     layout::BufferLayout
+    sizeof::Int64
+    length::Int64
 end
 
-function VertexBuffer(data, layout::BufferLayout)
+function VertexBuffer(
+    data::Vector{T}, layout::BufferLayout; usage = GL_STATIC_DRAW,
+) where T
     id = @ref glGenBuffers(1, Ref{UInt32})
-    type = GL_STATIC_DRAW # TODO change if data changes
-
+    size = sizeof(data)
     glBindBuffer(GL_ARRAY_BUFFER, id)
-    glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, type)
+    glBufferData(GL_ARRAY_BUFFER, size, data, usage)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
-
-    VertexBuffer(id, layout)
+    VertexBuffer{T}(id, layout, size, length(data))
 end
+
+Base.length(b::VertexBuffer) = b.length
+
+Base.eltype(::VertexBuffer{T}) where T = T
+
+Base.sizeof(b::VertexBuffer) = b.sizeof
 
 bind(b::VertexBuffer) = glBindBuffer(GL_ARRAY_BUFFER, b.id)
 
 unbind(::VertexBuffer) = glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+delete(b::VertexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
+
+function get_data(b::VertexBuffer{T})::Vector{T} where T
+    bind(b)
+    data = Vector{T}(undef, length(b))
+    glGetBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(b), data)
+    unbind(b)
+    data
+end
+
+function buffer_data!(b::VertexBuffer{T}, data::Vector{T}) where T
+    size = sizeof(data)
+    size > b.sizeof && error(
+        "Trying to buffer more data than is available: " *
+        "$size > $(b.sizeof) (bytes).")
+
+    bind(b)
+    glBufferSubData(GL_ARRAY_BUFFER, 0, size, data)
+    unbind(b)
+end
 
 struct IndexBuffer
     id::UInt32
@@ -81,6 +109,8 @@ end
 bind(b::IndexBuffer) = glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b.id)
 
 unbind(::IndexBuffer) = glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+delete(b::IndexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
 
 mutable struct VertexArray
     id::UInt32

@@ -3,18 +3,10 @@ struct BBox
     va::VertexArray
 end
 
-function BBox(bmin::Vec3f0, bmax::Vec3f0)
+function BBox(bmin::SVec3f0, bmax::SVec3f0)
     program = get_program(BBox)
 
-    vertices = [
-        bmin,
-        Vec3f0(bmin[1], bmin[2], bmax[3]),
-        Vec3f0(bmin[1], bmax[2], bmax[3]),
-        Vec3f0(bmin[1], bmax[2], bmin[3]),
-        bmax,
-        Vec3f0(bmax[1], bmax[2], bmin[3]),
-        Vec3f0(bmax[1], bmin[2], bmin[3]),
-        Vec3f0(bmax[1], bmin[2], bmax[3])]
+    vertices = _bbox_corners_to_buffer(bmin, bmax)
     indices = UInt32[
         # First side.
         0, 1,
@@ -32,10 +24,22 @@ function BBox(bmin::Vec3f0, bmax::Vec3f0)
         2, 4,
         3, 5]
 
-    layout = BufferLayout([BufferElement(Vec3f0, "position")])
+    layout = BufferLayout([BufferElement(SVec3f0, "position")])
     vb = VertexBuffer(vertices, layout)
     ib = IndexBuffer(indices, GL_LINES)
     BBox(program, VertexArray(ib, vb))
+end
+
+function _bbox_corners_to_buffer(bmin::SVec3f0, bmax::SVec3f0)
+    [
+        bmin,
+        SVec3f0(bmin[1], bmin[2], bmax[3]),
+        SVec3f0(bmin[1], bmax[2], bmax[3]),
+        SVec3f0(bmin[1], bmax[2], bmin[3]),
+        bmax,
+        SVec3f0(bmax[1], bmax[2], bmin[3]),
+        SVec3f0(bmax[1], bmin[2], bmin[3]),
+        SVec3f0(bmax[1], bmin[2], bmax[3])]
 end
 
 function get_program(::Type{BBox})
@@ -64,11 +68,17 @@ function get_program(::Type{BBox})
         Shader(GL_FRAGMENT_SHADER, fragment_shader_code)))
 end
 
-function draw(bbox::BBox, P, V)
+function draw(bbox::BBox, P::SMat4f0, V::SMat4f0)
     bind(bbox.program)
     bind(bbox.va)
 
     upload_uniform(bbox.program, "proj", P)
     upload_uniform(bbox.program, "view", V)
     draw(bbox.va)
+end
+
+function update_corners!(bbox::BBox, bmin::SVec3f0, bmax::SVec3f0)
+    new_buffer = _bbox_corners_to_buffer(bmin, bmax)
+    buffer_data!(bbox.va.vertex_buffer, new_buffer)
+    bbox
 end

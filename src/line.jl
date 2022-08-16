@@ -6,11 +6,11 @@ struct Line
     va::VertexArray
 end
 
-function Line(from::Vec3f0, to::Vec3f0; program = get_program(Line))
+function Line(from::SVec3f0, to::SVec3f0; program = get_program(Line))
     vertices = [from, to]
     indices = UInt32[0, 1]
 
-    layout = BufferLayout([BufferElement(Vec3f0, "position")])
+    layout = BufferLayout([BufferElement(SVec3f0, "position")])
     vb = VertexBuffer(vertices, layout)
     ib = IndexBuffer(indices, GL_LINES)
     Line(from, to, program, VertexArray(ib, vb))

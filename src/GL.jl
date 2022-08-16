@@ -54,9 +54,10 @@ macro ref(expression::Expr)
     end)
 end
 
-const Vec3f0 = SVector{3, Float32}
-const Vec4f0 = SVector{4, Float32}
-const Mat4x4f0 = SMatrix{4, 4, Float32}
+const SVec3f0 = SVector{3, Float32}
+const SVec4f0 = SVector{4, Float32}
+const SMat3f0 = SMatrix{3, 3, Float32}
+const SMat4f0 = SMatrix{4, 4, Float32}
 
 function look_at(position, target, up)
     Z = normalize(position - target)
