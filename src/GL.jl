@@ -131,6 +131,11 @@ function init_renderer(title; width = -1, height = -1, fullscreen::Bool = false)
     glfwSwapInterval(1) # enable vsync
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1) # you need this for RGB textures that their width is not a multiple of 4
 
+    #enable depth buffer
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glClearDepth(1.0f0);
+
     imgui_ctx = CImGui.CreateContext()
     CImGui.StyleColorsDark()
     style = CImGui.GetStyle()
