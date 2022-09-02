@@ -1,4 +1,4 @@
-struct Texture
+mutable struct Texture
     id::UInt32
     width::UInt32
     height::UInt32
@@ -34,11 +34,11 @@ function Texture(
         GL_TEXTURE_2D, 0, internal_format,
         width, height, 0, data_format, type, C_NULL)
 
-    set_texture_parameters(;kwargs...)
+    set_texture_parameters(; kwargs...)
     Texture(id, width, height, internal_format, data_format, type)
 end
 
-function bind(t::Texture, slot = 0)
+function bind(t::Texture, slot::Integer = 0)
     glActiveTexture(GL_TEXTURE0 + slot)
     glBindTexture(GL_TEXTURE_2D, t.id)
 end
@@ -59,9 +59,9 @@ end
 
 function load_texture_data(path::String, vertical_flip::Bool = true)
     !isfile(path) && error("File `$path` does not exist.")
-    image = permutedims(load(path), (2, 1))
-    vertical_flip && (image = image[:, end:-1:1];)
-    image
+    data = permutedims(load(path), (2, 1)) # HxW -> WxH
+    vertical_flip && (data = data[:, end:-1:1];)
+    data
 end
 
 function get_data_formats(pixel_type)
@@ -86,12 +86,40 @@ end
 
 function set_data!(t::Texture, data)
     bind(t)
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t.width, t.height, t.data_format, t.type, data)
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, t.internal_format,
+        t.width, t.height, 0, t.data_format, t.type, data)
 end
 
-function resize!(t::Texture; width, height)
-    delete!(t)
-    Texture(
-        width, height; type=t.type,
-        internal_format=t.internal_format, data_format=t.data_format)
+function get_n_channels(t)
+    if t.data_format == GL_RGB return 3
+    elseif t.data_format == GL_RGBA return 4
+    elseif t.data_format == GL_RED && return 4 end
+end
+
+function get_native_type(t)
+    if t.type == GL_UNSIGNED_BYTE return UInt8
+    elseif t.type == GL_UNSIGNED_INT_24_8 return UInt32 end
+end
+
+function get_data(t::Texture)
+    channels = get_n_channels(t)
+    data = Array{get_native_type(t)}(undef, channels, t.width, t.height)
+    get_data!(t, data)
+end
+
+function get_data!(t::Texture, data)
+    bind(t)
+    glGetTexImage(GL_TEXTURE_2D, 0, t.data_format, t.type, data)
+    unbind(t)
+    data
+end
+
+function resize!(t::Texture; width::Integer, height::Integer)
+    bind(t)
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, t.internal_format,
+        width, height, 0, t.data_format, t.type, C_NULL)
+    t.width = width
+    t.height = height
 end
