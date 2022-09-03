@@ -131,7 +131,7 @@ struct Context
     gl_ctx::CImGui.ImGuiOpenGLBackend.Context
 
     width::Int64
-    heigth::Int64
+    height::Int64
 end
 
 function Context(
