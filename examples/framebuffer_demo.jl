@@ -10,9 +10,7 @@ using GL
 
 function main()
     GL.init()
-    context = GL.Context("でも"; width=1280, height=960)
-    GL.set_resize_callback!(context, GL.resize_callback)
-
+    context = GL.Context("でも"; width=1280, height=960, resizable=false)
     fb = GL.Framebuffer(; width=1280, height=960)
     screen = GL.Screen()
 
