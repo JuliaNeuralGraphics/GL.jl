@@ -11,8 +11,8 @@ mutable struct RenderSurface
     va::VertexArray
 end
 
-function RenderSurface(resolution)
-    texture = Texture(resolution...; internal_format=GL_RGB32F, type=GL_FLOAT)
+function RenderSurface(; width::Integer, height::Integer)
+    texture = Texture(width, height; internal_format=GL_RGB32F, type=GL_FLOAT)
     program = get_program(RenderSurface)
     bind(program)
     upload_uniform(program, "u_Textures[0]", 0)
@@ -70,10 +70,9 @@ function draw(s::RenderSurface)
     draw(s.va)
 end
 
-function resize!(s::RenderSurface, new_res)
-    new_res[1] == s.texture.width && new_res[2] == s.texture.height &&
-        return nothing
-    s.texture = resize!(s.texture; width=new_res[1], height=new_res[2])
+function resize!(s::RenderSurface; width::Integer, height::Integer)
+    width == s.texture.width && height == s.texture.height && return nothing
+    resize!(s.texture; width, height)
 end
 
 @inline set_data!(s::RenderSurface, data) = set_data!(s.texture, data)
