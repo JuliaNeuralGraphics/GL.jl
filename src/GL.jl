@@ -54,6 +54,7 @@ macro ref(expression::Expr)
     end)
 end
 
+const SVec2f0 = SVector{2, Float32}
 const SVec3f0 = SVector{3, Float32}
 const SVec4f0 = SVector{4, Float32}
 const SMat3f0 = SMatrix{3, 3, Float32}
@@ -75,11 +76,15 @@ function _frustum(left, right, bottom, top, znear, zfar)
     (right == left || bottom == top || znear == zfar) &&
         return SMatrix{4, 4, Float32}(I)
 
+    rl = 1f0 / (right - left)
+    tb = 1f0 / (top - bottom)
+    zz = 1f0 / (zfar - znear)
+
     SMatrix{4, 4, Float32}(
-        2f0 * znear / (right - left), 0f0, 0f0, 0f0,
-        0f0, 2f0 * znear / (top - bottom), 0f0, 0f0,
-        (right + left) / (right - left), (top + bottom) / (top - bottom), -(zfar + znear) / (zfar - znear), -1f0,
-        0f0, 0f0, (-2f0 * znear * zfar) / (zfar - znear), 0f0)
+        2f0 * znear * rl, 0f0, 0f0, 0f0,
+        0f0, 2f0 * znear * tb, 0f0, 0f0,
+        (right + left) * rl, (top + bottom) * tb, -(zfar + znear) * zz, -1f0,
+        0f0, 0f0, (-2f0 * znear * zfar) * zz, 0f0)
 end
 
 """
@@ -96,20 +101,43 @@ end
 
 include("shader.jl")
 include("texture.jl")
+include("texture_array.jl")
 include("buffers.jl")
+include("framebuffer.jl")
 include("quad.jl")
 include("bounding_box.jl")
+include("plane.jl")
 include("line.jl")
 include("frustum.jl")
+include("widget.jl")
 
 const GLSL_VERSION = 410
 
-function init()
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0)
+function init(version_major::Integer = 3, version_minor::Integer = 0)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version_major)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version_minor)
 end
 
-function init_renderer(title; width = -1, height = -1, fullscreen::Bool = false)
+function get_gl_version()
+    vmajor = @ref glGetIntegerv(GL_MAJOR_VERSION, Ref{Int32})
+    vminor = @ref glGetIntegerv(GL_MINOR_VERSION, Ref{Int32})
+    vmajor, vminor
+end
+
+struct Context
+    window::Ptr{GLFWwindow}
+    imgui_ctx::Ptr{CImGui.ImGuiContext}
+    glfw_ctx::CImGui.ImGuiGLFWBackend.Context
+    gl_ctx::CImGui.ImGuiOpenGLBackend.Context
+
+    width::Int64
+    heigth::Int64
+end
+
+function Context(
+    title; width = -1, height = -1, fullscreen::Bool = false,
+    vsync::Bool = true, resizable::Bool = true,
+)
     if fullscreen && (width != -1 || height != -1)
         error("You can specify either `fullscreen` or `width` & `height` parameters.")
     end
@@ -124,12 +152,13 @@ function init_renderer(title; width = -1, height = -1, fullscreen::Bool = false)
         window = glfwCreateWindow(mode.width, mode.height, title, monitor, C_NULL)
         width, height = mode.width, mode.height
     else
-        glfwWindowHint(GLFW_RESIZABLE, true)
+        glfwWindowHint(GLFW_RESIZABLE, resizable)
         window = glfwCreateWindow(width, height, title, C_NULL, C_NULL)
     end
     glfwMakeContextCurrent(window)
-    glfwSwapInterval(1) # enable vsync
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1) # you need this for RGB textures that their width is not a multiple of 4
+    glfwSwapInterval(vsync ? 1 : 0)
+    # You need this for RGB textures that their width is not a multiple of 4.
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
     imgui_ctx = CImGui.CreateContext()
     CImGui.StyleColorsDark()
@@ -143,63 +172,46 @@ function init_renderer(title; width = -1, height = -1, fullscreen::Bool = false)
 
     CImGui.ImGuiGLFWBackend.init(glfw_ctx)
     CImGui.ImGuiOpenGLBackend.init(gl_ctx)
-
-    window, imgui_ctx, glfw_ctx, gl_ctx, (width, height)
+    Context(window, imgui_ctx, glfw_ctx, gl_ctx, width, height)
 end
 
-function imgui_begin(glfw_ctx, gl_ctx)
-    CImGui.ImGuiOpenGLBackend.new_frame(gl_ctx)
-    CImGui.ImGuiGLFWBackend.new_frame(glfw_ctx)
+enable_depth() = glEnable(GL_DEPTH_TEST)
+
+disable_depth() = glDisable(GL_DEPTH_TEST)
+
+enable_wireframe() = glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+
+disable_wireframe() = glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+function delete!(c::Context)
+    imgui_shutdown!(c)
+    glfwDestroyWindow(c.window)
+end
+
+function set_resizable_window!(c::Context, resizable::Bool)
+    glfwSetWindowAttrib(c.window, GLFW_RESIZABLE, resizable)
+end
+
+function set_resize_callback!(c::Context, callback)
+    glfwSetWindowSizeCallback(
+        c.window, @cfunction($callback, Cvoid, (Ptr{GLFWwindow}, Cint, Cint)))
+end
+
+function imgui_begin(c::Context)
+    CImGui.ImGuiOpenGLBackend.new_frame(c.gl_ctx)
+    CImGui.ImGuiGLFWBackend.new_frame(c.glfw_ctx)
     CImGui.NewFrame()
 end
 
-function imgui_end(gl_ctx)
+function imgui_end(c::Context)
     CImGui.Render()
-    CImGui.ImGuiOpenGLBackend.render(gl_ctx)
+    CImGui.ImGuiOpenGLBackend.render(c.gl_ctx)
 end
 
-function imgui_shutdown(imgui_ctx, glfw_ctx, gl_ctx)
-    CImGui.ImGuiOpenGLBackend.shutdown(gl_ctx)
-    CImGui.ImGuiGLFWBackend.shutdown(glfw_ctx)
-    CImGui.DestroyContext(imgui_ctx)
-end
-
-function spinner(label, radius, thickness, color)
-    window = CImGui.igGetCurrentWindow()
-    unsafe_load(window.SkipItems) && return false
-
-    style = CImGui.igGetStyle()
-    id = CImGui.GetID(label)
-
-    pos = unsafe_load(window.DC).CursorPos
-    y_pad = unsafe_load(style.FramePadding.y)
-    size = CImGui.ImVec2(radius * 2, (radius + y_pad) * 2)
-
-    bb = CImGui.ImRect(pos, CImGui.ImVec2(pos.x + size.x, pos.y + size.y))
-    CImGui.igItemSizeRect(bb, y_pad)
-    CImGui.igItemAdd(bb, id, C_NULL) || return false
-
-    # Render.
-    draw_list = unsafe_load(window.DrawList)
-    CImGui.ImDrawList_PathClear(draw_list)
-
-    n_segments = 30f0
-    start::Float32 = abs(sin(CImGui.GetTime() * 1.8f0) * (n_segments - 5f0))
-
-    a_min = π * 2f0 * start / n_segments
-    a_max = π * 2f0 * (n_segments - 3f0) / n_segments
-    a_δ = a_max - a_min
-    center = CImGui.ImVec2(pos.x + radius, pos.y + radius + y_pad)
-
-    for i in 1:n_segments
-        a = a_min + ((i - 1) / n_segments) * a_δ
-        ai = a + CImGui.GetTime() * 8
-        CImGui.ImDrawList_PathLineTo(draw_list, CImGui.ImVec2(
-            center.x + cos(ai) * radius,
-            center.y + sin(ai) * radius))
-    end
-    CImGui.ImDrawList_PathStroke(draw_list, color, false, thickness)
-    true
+function imgui_shutdown!(c::Context)
+    CImGui.ImGuiOpenGLBackend.shutdown(c.gl_ctx)
+    CImGui.ImGuiGLFWBackend.shutdown(c.glfw_ctx)
+    CImGui.DestroyContext(c.imgui_ctx)
 end
 
 clear(bit::UInt32 = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) = glClear(bit)
@@ -212,17 +224,17 @@ hide_cursor(w::GLFWwindow) = glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_DISABL
 
 show_cursor(w::GLFWwindow) = glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
 
-function render_loop(draw_f, window, imgui_ctx, glfw_ctx, gl_ctx)
+function render_loop(draw_function, c::Context; destroy_context::Bool = true)
     try
-        while glfwWindowShouldClose(window) == 0
-            draw_f()
+        while glfwWindowShouldClose(c.window) == 0
+            is_running = draw_function()
+            is_running || break
         end
     catch exception
         @error "Error in render loop!" exception=exception
         Base.show_backtrace(stderr, catch_backtrace())
     finally
-        imgui_shutdown(imgui_ctx, glfw_ctx, gl_ctx)
-        glfwDestroyWindow(window)
+        destroy_context && delete!(c)
     end
 end
 

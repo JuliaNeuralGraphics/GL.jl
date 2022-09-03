@@ -57,10 +57,12 @@ function get_program(::Type{BBox})
     fragment_shader_code = """
     #version 330 core
 
+    uniform vec4 u_color;
+
     layout (location = 0) out vec4 color;
 
     void main(void) {
-        color = vec4(0.0, 1.0, 0.5, 1.0);
+        color = u_color;
     }
     """
     ShaderProgram((
@@ -68,10 +70,14 @@ function get_program(::Type{BBox})
         Shader(GL_FRAGMENT_SHADER, fragment_shader_code)))
 end
 
-function draw(bbox::BBox, P::SMat4f0, V::SMat4f0)
+function draw(
+    bbox::BBox, P::SMat4f0, V::SMat4f0;
+    color::SVec4f0 = SVec4f0(1f0, 0f0, 0f0, 1f0),
+)
     bind(bbox.program)
     bind(bbox.va)
 
+    upload_uniform(bbox.program, "u_color", color)
     upload_uniform(bbox.program, "proj", P)
     upload_uniform(bbox.program, "view", V)
     draw(bbox.va)
@@ -81,4 +87,9 @@ function update_corners!(bbox::BBox, bmin::SVec3f0, bmax::SVec3f0)
     new_buffer = _bbox_corners_to_buffer(bmin, bmax)
     buffer_data!(bbox.va.vertex_buffer, new_buffer)
     bbox
+end
+
+function delete!(bbox::BBox; with_program::Bool = false)
+    delete!(bbox.va)
+    with_program && delete!(bbox.program)
 end

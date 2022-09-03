@@ -50,3 +50,8 @@ function draw(l::Line, P, V)
     upload_uniform(l.program, "view", V)
     draw(l.va)
 end
+
+function delete!(l::Line; with_program::Bool = false)
+    delete!(l.va)
+    with_program && delete!(l.program)
+end

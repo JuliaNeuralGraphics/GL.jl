@@ -69,7 +69,7 @@ bind(b::VertexBuffer) = glBindBuffer(GL_ARRAY_BUFFER, b.id)
 
 unbind(::VertexBuffer) = glBindBuffer(GL_ARRAY_BUFFER, 0)
 
-delete(b::VertexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
+delete!(b::VertexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
 
 function get_data(b::VertexBuffer{T})::Vector{T} where T
     bind(b)
@@ -110,7 +110,7 @@ bind(b::IndexBuffer) = glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b.id)
 
 unbind(::IndexBuffer) = glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-delete(b::IndexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
+delete!(b::IndexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
 
 mutable struct VertexArray
     id::UInt32
@@ -161,4 +161,10 @@ end
 
 function draw(va::VertexArray)
     glDrawElements(va.index_buffer.primitive_type, va.index_buffer.count, GL_UNSIGNED_INT, C_NULL)
+end
+
+function delete!(va::VertexArray)
+    glDeleteVertexArrays(1, Ref{UInt32}(va.id))
+    delete!(va.index_buffer)
+    delete!(va.vertex_buffer)
 end
