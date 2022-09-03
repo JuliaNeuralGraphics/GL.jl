@@ -48,6 +48,10 @@ function main()
         drawed_data = GL.get_data(screen_texture)
         save("screen.png", rotl90(colorview(RGB{N0f8}, drawed_data)))
 
+        depth_texture = fb[GL_DEPTH_ATTACHMENT].attachment
+        depth_data = GL.get_data(depth_texture)[1, :, :]
+        save("depth.png", rotl90(colorview(Gray{Float32}, depth_data)))
+
         GL.draw(screen, screen_texture)
 
         CImGui.Begin("UI")

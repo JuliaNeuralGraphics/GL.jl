@@ -45,11 +45,11 @@ Base.getindex(f::Framebuffer, type) = f.attachments[type]
 function get_default_attachments(width::Integer, height::Integer)
     color = Texture(width, height; internal_format=GL_RGB8, data_format=GL_RGB)
     depth = Texture(
-        width, height; type=GL_UNSIGNED_INT_24_8,
-        internal_format=GL_DEPTH24_STENCIL8, data_format=GL_DEPTH_STENCIL)
+        width, height; type=GL_FLOAT,
+        internal_format=GL_DEPTH_COMPONENT, data_format=GL_DEPTH_COMPONENT)
     Dict{UInt32, Attachment}(
         GL_COLOR_ATTACHMENT0 => Attachment(GL_TEXTURE_2D, color),
-        GL_DEPTH_STENCIL_ATTACHMENT => Attachment(GL_TEXTURE_2D, depth))
+        GL_DEPTH_ATTACHMENT => Attachment(GL_TEXTURE_2D, depth))
 end
 
 # FB must be binded already.

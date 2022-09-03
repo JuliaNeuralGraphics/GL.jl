@@ -94,12 +94,13 @@ end
 function get_n_channels(t)
     if t.data_format == GL_RGB return 3
     elseif t.data_format == GL_RGBA return 4
+    elseif t.data_format == GL_DEPTH_COMPONENT return 1
     elseif t.data_format == GL_RED && return 4 end
 end
 
 function get_native_type(t)
     if t.type == GL_UNSIGNED_BYTE return UInt8
-    elseif t.type == GL_UNSIGNED_INT_24_8 return UInt32 end
+    elseif t.type == GL_FLOAT return Float32 end
 end
 
 function get_data(t::Texture)

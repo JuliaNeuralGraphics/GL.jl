@@ -76,11 +76,15 @@ function _frustum(left, right, bottom, top, znear, zfar)
     (right == left || bottom == top || znear == zfar) &&
         return SMatrix{4, 4, Float32}(I)
 
+    rl = 1f0 / (right - left)
+    tb = 1f0 / (top - bottom)
+    zz = 1f0 / (zfar - znear)
+
     SMatrix{4, 4, Float32}(
-        2f0 * znear / (right - left), 0f0, 0f0, 0f0,
-        0f0, 2f0 * znear / (top - bottom), 0f0, 0f0,
-        (right + left) / (right - left), (top + bottom) / (top - bottom), -(zfar + znear) / (zfar - znear), -1f0,
-        0f0, 0f0, (-2f0 * znear * zfar) / (zfar - znear), 0f0)
+        2f0 * znear * rl, 0f0, 0f0, 0f0,
+        0f0, 2f0 * znear * tb, 0f0, 0f0,
+        (right + left) * rl, (top + bottom) * tb, -(zfar + znear) * zz, -1f0,
+        0f0, 0f0, (-2f0 * znear * zfar) * zz, 0f0)
 end
 
 """
