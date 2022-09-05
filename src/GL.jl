@@ -54,6 +54,28 @@ macro ref(expression::Expr)
     end)
 end
 
+function gl_get_error_string(e)
+    if e == GL_NO_ERROR return "GL_NO_ERROR"
+    elseif e == GL_INVALID_ENUM return "GL_INVALID_ENUM"
+    elseif e == GL_INVALID_VALUE return "GL_INVALID_VALUE"
+    elseif e == GL_INVALID_OPERATION return "GL_INVALID_OPERATION"
+    elseif e == GL_STACK_OVERFLOW return "GL_STACK_OVERFLOW"
+    elseif e == GL_STACK_UNDERFLOW return "GL_STACK_UNDERFLOW"
+    elseif e == GL_OUT_OF_MEMORY return "GL_OUT_OF_MEMORY"
+    elseif e == GL_INVALID_FRAMEBUFFER_OPERATION return "GL_INVALID_FRAMEBUFFER_OPERATION"
+    elseif e == GL_CONTEXT_LOST return "GL_CONTEXT_LOST" end
+    "Unknown error"
+end
+
+macro gl_check(expr)
+    esc(quote
+        result = $expr
+        err = glGetError()
+        err == GL_NO_ERROR || error("GL error: " * gl_get_error_string(err))
+        result
+    end)
+end
+
 const SVec2f0 = SVector{2, Float32}
 const SVec3f0 = SVector{3, Float32}
 const SVec4f0 = SVector{4, Float32}
@@ -98,6 +120,8 @@ function perspective(fovy, aspect, znear, zfar)
     w = h * aspect
     _frustum(-w, w, -h, h, znear, zfar)
 end
+
+abstract type AbstractTexture end
 
 include("shader.jl")
 include("texture.jl")

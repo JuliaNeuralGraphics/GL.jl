@@ -42,11 +42,11 @@ function main()
         GL.set_clear_color(0.0, 0.0, 0.0, 1.0)
         GL.clear(GL_COLOR_BUFFER_BIT)
 
-        screen_texture = fb[GL_COLOR_ATTACHMENT0].attachment
+        screen_texture = fb[GL_COLOR_ATTACHMENT0]
         drawed_data = GL.get_data(screen_texture)
         save("screen.png", rotl90(colorview(RGB{N0f8}, drawed_data)))
 
-        depth_texture = fb[GL_DEPTH_ATTACHMENT].attachment
+        depth_texture = fb[GL_DEPTH_ATTACHMENT]
         depth_data = GL.get_data(depth_texture)[1, :, :]
         save("depth.png", rotl90(colorview(Gray{Float32}, depth_data)))
 

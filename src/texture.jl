@@ -1,4 +1,4 @@
-mutable struct Texture
+mutable struct Texture <: AbstractTexture
     id::UInt32
     width::UInt32
     height::UInt32
@@ -14,11 +14,11 @@ function Texture(path::String; kwargs...)
     internal_format, data_format = get_data_formats(eltype(data))
     width, height = size(data)
 
-    id = @ref glGenTextures(1, Ref{UInt32})
-    glBindTexture(GL_TEXTURE_2D, id)
-    glTexImage2D(
+    id = @gl_check(@ref(glGenTextures(1, Ref{UInt32})))
+    @gl_check(glBindTexture(GL_TEXTURE_2D, id))
+    @gl_check(glTexImage2D(
         GL_TEXTURE_2D, 0, internal_format,
-        width, height, 0, data_format, type, data)
+        width, height, 0, data_format, type, data))
 
     set_texture_parameters(;kwargs...)
     Texture(id, width, height, internal_format, data_format, type)
@@ -28,33 +28,33 @@ function Texture(
     width, height; type::UInt32 = GL_UNSIGNED_BYTE,
     internal_format::UInt32 = GL_RGB8, data_format::UInt32 = GL_RGB, kwargs...,
 )
-    id = @ref glGenTextures(1, Ref{UInt32})
-    glBindTexture(GL_TEXTURE_2D, id)
-    glTexImage2D(
+    id = @gl_check(@ref(glGenTextures(1, Ref{UInt32})))
+    @gl_check(glBindTexture(GL_TEXTURE_2D, id))
+    @gl_check(glTexImage2D(
         GL_TEXTURE_2D, 0, internal_format,
-        width, height, 0, data_format, type, C_NULL)
+        width, height, 0, data_format, type, C_NULL))
 
     set_texture_parameters(; kwargs...)
     Texture(id, width, height, internal_format, data_format, type)
 end
 
 function bind(t::Texture, slot::Integer = 0)
-    glActiveTexture(GL_TEXTURE0 + slot)
-    glBindTexture(GL_TEXTURE_2D, t.id)
+    @gl_check(glActiveTexture(GL_TEXTURE0 + slot))
+    @gl_check(glBindTexture(GL_TEXTURE_2D, t.id))
 end
 
-unbind(::Texture) = glBindTexture(GL_TEXTURE_2D, 0)
+unbind(::Texture) = @gl_check(glBindTexture(GL_TEXTURE_2D, 0))
 
-delete!(t::Texture) = glDeleteTextures(1, Ref(t.id))
+delete!(t::Texture) = @gl_check(glDeleteTextures(1, Ref(t.id)))
 
 function set_texture_parameters(;
     min_filter::UInt32 = GL_LINEAR, mag_filter::UInt32 = GL_LINEAR,
     wrap_s::UInt32 = GL_REPEAT, wrap_t::UInt32 = GL_REPEAT,
 )
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t)
+    @gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter))
+    @gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter))
+    @gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s))
+    @gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t))
 end
 
 function load_texture_data(path::String, vertical_flip::Bool = true)
@@ -86,9 +86,9 @@ end
 
 function set_data!(t::Texture, data)
     bind(t)
-    glTexImage2D(
+    @gl_check(glTexImage2D(
         GL_TEXTURE_2D, 0, t.internal_format,
-        t.width, t.height, 0, t.data_format, t.type, data)
+        t.width, t.height, 0, t.data_format, t.type, data))
 end
 
 function get_n_channels(t)
@@ -111,16 +111,16 @@ end
 
 function get_data!(t::Texture, data)
     bind(t)
-    glGetTexImage(GL_TEXTURE_2D, 0, t.data_format, t.type, data)
+    @gl_check(glGetTexImage(GL_TEXTURE_2D, 0, t.data_format, t.type, data))
     unbind(t)
     data
 end
 
 function resize!(t::Texture; width::Integer, height::Integer)
     bind(t)
-    glTexImage2D(
+    @gl_check(glTexImage2D(
         GL_TEXTURE_2D, 0, t.internal_format,
-        width, height, 0, t.data_format, t.type, C_NULL)
+        width, height, 0, t.data_format, t.type, C_NULL))
     t.width = width
     t.height = height
 end

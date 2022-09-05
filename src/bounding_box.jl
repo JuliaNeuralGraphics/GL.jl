@@ -26,7 +26,7 @@ function BBox(bmin::SVec3f0, bmax::SVec3f0)
 
     layout = BufferLayout([BufferElement(SVec3f0, "position")])
     vb = VertexBuffer(vertices, layout)
-    ib = IndexBuffer(indices, GL_LINES)
+    ib = IndexBuffer(indices; primitive_type=GL_LINES)
     BBox(program, VertexArray(ib, vb))
 end
 
@@ -85,7 +85,7 @@ end
 
 function update_corners!(bbox::BBox, bmin::SVec3f0, bmax::SVec3f0)
     new_buffer = _bbox_corners_to_buffer(bmin, bmax)
-    buffer_data!(bbox.va.vertex_buffer, new_buffer)
+    set_data!(bbox.va.vertex_buffer, new_buffer)
     bbox
 end
 
