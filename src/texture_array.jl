@@ -1,4 +1,4 @@
-mutable struct TextureArray
+mutable struct TextureArray <: AbstractTexture
     id::UInt32
     width::UInt32
     height::UInt32
@@ -14,11 +14,11 @@ function TextureArray(
     type::UInt32 = GL_UNSIGNED_BYTE, internal_format::UInt32 = GL_RGB8,
     data_format::UInt32 = GL_RGB, kwargs...,
 )
-    id = @ref glGenTextures(1, Ref{UInt32})
-    glBindTexture(GL_TEXTURE_2D_ARRAY, id)
-    glTexImage3D(
+    id = @gl_check(@ref(glGenTextures(1, Ref{UInt32})))
+    @gl_check(glBindTexture(GL_TEXTURE_2D_ARRAY, id))
+    @gl_check(glTexImage3D(
         GL_TEXTURE_2D_ARRAY, 0, internal_format,
-        width, height, depth, 0, data_format, type, C_NULL)
+        width, height, depth, 0, data_format, type, C_NULL))
 
     # TODO allow disabling?
     set_texture_array_parameters(; kwargs...)
@@ -37,9 +37,9 @@ end
 
 function set_data!(t::TextureArray, data)
     bind(t)
-    glTexImage3D(
+    @gl_check(glTexImage3D(
         GL_TEXTURE_2D_ARRAY, 0, t.internal_format,
-        t.width, t.height, t.depth, 0, t.data_format, t.type, data)
+        t.width, t.height, t.depth, 0, t.data_format, t.type, data))
 end
 
 function get_data(t::TextureArray)
@@ -51,27 +51,28 @@ end
 
 function get_data!(t::TextureArray, data)
     bind(t)
-    glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, t.data_format, t.type, data)
+    @gl_check(glGetTexImage(
+        GL_TEXTURE_2D_ARRAY, 0, t.data_format, t.type, data))
     unbind(t)
     data
 end
 
 function bind(t::TextureArray, slot::Integer = 0)
-    glActiveTexture(GL_TEXTURE0 + slot)
-    glBindTexture(GL_TEXTURE_2D_ARRAY, t.id)
+    @gl_check(glActiveTexture(GL_TEXTURE0 + slot))
+    @gl_check(glBindTexture(GL_TEXTURE_2D_ARRAY, t.id))
 end
 
-unbind(::TextureArray) = glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
+unbind(::TextureArray) = @gl_check(glBindTexture(GL_TEXTURE_2D_ARRAY, 0))
 
-delete!(t::TextureArray) = glDeleteTextures(1, Ref(t.id))
+delete!(t::TextureArray) = @gl_check(glDeleteTextures(1, Ref(t.id)))
 
 function resize!(
     t::TextureArray; width::Integer, height::Integer, depth::Integer,
 )
     bind(t)
-    glTexImage3D(
+    @gl_check(glTexImage3D(
         GL_TEXTURE_2D_ARRAY, 0, t.internal_format,
-        width, height, depth, 0, t.data_format, t.type, C_NULL)
+        width, height, depth, 0, t.data_format, t.type, C_NULL))
     t.width = width
     t.height = height
     t.depth = depth

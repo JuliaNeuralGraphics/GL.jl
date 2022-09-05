@@ -12,7 +12,7 @@ function Line(from::SVec3f0, to::SVec3f0; program = get_program(Line))
 
     layout = BufferLayout([BufferElement(SVec3f0, "position")])
     vb = VertexBuffer(vertices, layout)
-    ib = IndexBuffer(indices, GL_LINES)
+    ib = IndexBuffer(indices; primitive_type=GL_LINES)
     Line(from, to, program, VertexArray(ib, vb))
 end
 

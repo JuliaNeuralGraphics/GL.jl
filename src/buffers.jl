@@ -41,22 +41,21 @@ function calculate_offset!(elements)
     offset
 end
 
-struct VertexBuffer{T}
+mutable struct VertexBuffer{T}
     id::UInt32
+    usage::UInt32
     layout::BufferLayout
     sizeof::Int64
     length::Int64
 end
 
-function VertexBuffer(
-    data::Vector{T}, layout::BufferLayout; usage = GL_STATIC_DRAW,
-) where T
-    id = @ref glGenBuffers(1, Ref{UInt32})
-    size = sizeof(data)
-    glBindBuffer(GL_ARRAY_BUFFER, id)
-    glBufferData(GL_ARRAY_BUFFER, size, data, usage)
-    glBindBuffer(GL_ARRAY_BUFFER, 0)
-    VertexBuffer{T}(id, layout, size, length(data))
+function VertexBuffer(data, layout::BufferLayout; usage = GL_STATIC_DRAW)
+    sof = sizeof(data)
+    id = @gl_check(@ref(glGenBuffers(1, Ref{UInt32})))
+    @gl_check(glBindBuffer(GL_ARRAY_BUFFER, id))
+    @gl_check(glBufferData(GL_ARRAY_BUFFER, sof, data, usage))
+    @gl_check(glBindBuffer(GL_ARRAY_BUFFER, 0))
+    VertexBuffer{eltype(data)}(id, usage, layout, sof, length(data))
 end
 
 Base.length(b::VertexBuffer) = b.length
@@ -65,52 +64,86 @@ Base.eltype(::VertexBuffer{T}) where T = T
 
 Base.sizeof(b::VertexBuffer) = b.sizeof
 
-bind(b::VertexBuffer) = glBindBuffer(GL_ARRAY_BUFFER, b.id)
+bind(b::VertexBuffer) = @gl_check(glBindBuffer(GL_ARRAY_BUFFER, b.id))
 
-unbind(::VertexBuffer) = glBindBuffer(GL_ARRAY_BUFFER, 0)
+unbind(::VertexBuffer) = @gl_check(glBindBuffer(GL_ARRAY_BUFFER, 0))
 
-delete!(b::VertexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
+delete!(b::VertexBuffer) = @gl_check(glDeleteBuffers(1, Ref{UInt32}(b.id)))
 
 function get_data(b::VertexBuffer{T})::Vector{T} where T
     bind(b)
     data = Vector{T}(undef, length(b))
-    glGetBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(b), data)
+    @gl_check(glGetBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(b), data))
+    glBufferData
     unbind(b)
     data
 end
 
-function buffer_data!(b::VertexBuffer{T}, data::Vector{T}) where T
-    size = sizeof(data)
-    size > b.sizeof && error(
-        "Trying to buffer more data than is available: " *
-        "$size > $(b.sizeof) (bytes).")
-
+function set_data!(b::VertexBuffer{T}, data) where T
+    T == eltype(data) || error("Not the same eltype: $T vs $(eltype(data)).")
+    sof = sizeof(data)
     bind(b)
-    glBufferSubData(GL_ARRAY_BUFFER, 0, size, data)
+    if length(data) > length(b)
+        @gl_check(glBufferData(GL_ARRAY_BUFFER, sof, data, b.usage))
+    else
+        @gl_check(glBufferSubData(GL_ARRAY_BUFFER, 0, sof, data))
+    end
     unbind(b)
+    b.length = length(data)
+    b.sizeof = sof
 end
 
-struct IndexBuffer
+mutable struct IndexBuffer
     id::UInt32
-    count::UInt32
     primitive_type::UInt32
+    usage::UInt32
+    sizeof::Int64
+    length::Int64
 end
 
-function IndexBuffer(indices, primitive_type::UInt32 = GL_TRIANGLES)
+function IndexBuffer(
+    indices; primitive_type::UInt32 = GL_TRIANGLES,
+    usage::UInt32 = GL_STATIC_DRAW,
+)
+    sof, len = sizeof(indices), length(indices)
+
     id = @ref glGenBuffers(1, Ref{UInt32})
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-
-    IndexBuffer(id, length(indices), primitive_type)
+    @gl_check(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id))
+    @gl_check(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sof, indices, usage))
+    @gl_check(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0))
+    IndexBuffer(id, primitive_type, usage, sof, len)
 end
 
-bind(b::IndexBuffer) = glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b.id)
+function set_data!(b::IndexBuffer, data::D) where D <: AbstractArray
+    sof = sizeof(data)
+    bind(b)
+    if length(data) > length(b)
+        @gl_check(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sof, data, b.usage))
+    else
+        @gl_check(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sof, data))
+    end
+    unbind(b)
+    b.length = length(data)
+    b.sizeof = sof
+end
 
-unbind(::IndexBuffer) = glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+function get_data(b::IndexBuffer)
+    data = Vector{UInt32}(undef, length(b))
+    bind(b)
+    @gl_check(glGetBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(b), data))
+    unbind(b)
+    data
+end
 
-delete!(b::IndexBuffer) = glDeleteBuffers(1, Ref{UInt32}(b.id))
+Base.length(b::IndexBuffer) = b.length
+
+Base.sizeof(b::IndexBuffer) = b.sizeof
+
+bind(b::IndexBuffer) = @gl_check(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b.id))
+
+unbind(::IndexBuffer) = @gl_check(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0))
+
+delete!(b::IndexBuffer) = @gl_check(glDeleteBuffers(1, Ref{UInt32}(b.id)))
 
 mutable struct VertexArray
     id::UInt32
@@ -120,21 +153,19 @@ mutable struct VertexArray
 end
 
 function VertexArray(ib::IndexBuffer, vb::VertexBuffer)
-    id = @ref glGenVertexArrays(1, Ref{UInt32})
-
+    id = @gl_check(@ref(glGenVertexArrays(1, Ref{UInt32})))
     va = VertexArray(id, ib, vb, zero(UInt32))
     set_index_buffer(va)
     set_vertex_buffer(va)
-
     va
 end
 
 function bind(va::VertexArray)
-    glBindVertexArray(va.id)
+    @gl_check(glBindVertexArray(va.id))
     bind(va.index_buffer)
 end
 
-unbind(::VertexArray) = glBindVertexArray(0)
+unbind(::VertexArray) = @gl_check(glBindVertexArray(0))
 
 function set_index_buffer(va::VertexArray)
     bind(va)
@@ -152,19 +183,21 @@ function set_vertex_buffer(va::VertexArray)
 end
 
 function set_pointer!(va::VertexArray, layout::BufferLayout, el::BufferElement)
-    glEnableVertexAttribArray(va.vb_id)
-    glVertexAttribPointer(
+    @gl_check(glEnableVertexAttribArray(va.vb_id))
+    @gl_check(glVertexAttribPointer(
         va.vb_id, length(el), gl_eltype(el), el.normalized ? GL_TRUE : GL_FALSE,
-        layout.stride, Ptr{Cvoid}(Int64(el.offset)))
+        layout.stride, Ptr{Cvoid}(Int64(el.offset))))
     va.vb_id += 1
 end
 
 function draw(va::VertexArray)
-    glDrawElements(va.index_buffer.primitive_type, va.index_buffer.count, GL_UNSIGNED_INT, C_NULL)
+    @gl_check(glDrawElements(
+        va.index_buffer.primitive_type, length(va.index_buffer),
+        GL_UNSIGNED_INT, C_NULL))
 end
 
 function delete!(va::VertexArray)
-    glDeleteVertexArrays(1, Ref{UInt32}(va.id))
+    @gl_check(glDeleteVertexArrays(1, Ref{UInt32}(va.id)))
     delete!(va.index_buffer)
     delete!(va.vertex_buffer)
 end

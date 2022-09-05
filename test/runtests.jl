@@ -28,6 +28,17 @@ end
     end
 end
 
+@testset "Test OP on deleted texture" begin
+    in_gl_ctx() do
+        t = GL.Texture(2, 2)
+        @test t.id > 0
+        GL.delete!(t)
+        new_width, new_height = 4, 4
+        @test_throws ErrorException GL.resize!(
+            t; width=new_width, height=new_height)
+    end
+end
+
 @testset "Read & write texture" begin
     in_gl_ctx() do
         t = GL.Texture(4, 4)
@@ -81,13 +92,11 @@ end
 @testset "Framebuffer creation" begin
     in_gl_ctx() do
         fb = GL.Framebuffer(Dict(
-            GL_COLOR_ATTACHMENT0 => GL.Attachment(
-                GL_TEXTURE_2D_ARRAY, GL.TextureArray(0, 0, 0)),
-            GL_DEPTH_STENCIL_ATTACHMENT => GL.Attachment(
-                GL_TEXTURE_2D_ARRAY, GL.TextureArray(0, 0, 0)),
-        ))
+            GL_COLOR_ATTACHMENT0 => GL.TextureArray(0, 0, 0),
+            GL_DEPTH_STENCIL_ATTACHMENT => GL.TextureArray(0, 0, 0)))
         @test fb.id > 0
         @test length(fb.attachments) == 2
+        @test GL.is_complete(fb)
 
         GL.delete!(fb)
     end
@@ -98,5 +107,53 @@ end
         l = GL.Line(zeros(SVector{3, Float32}), ones(SVector{3, Float32}))
         @test l.va.id > 0
         GL.delete!(l; with_program=true)
+    end
+end
+
+@testset "IndexBuffer creation, update, read" begin
+    in_gl_ctx() do
+        idx1 = UInt32[0, 1, 2, 3]
+        idx2 = UInt32[0, 1, 2, 3, 4, 5, 6, 7]
+        idx3 = UInt32[0, 1]
+
+        ib = GL.IndexBuffer(idx1; primitive_type=GL_LINES, usage=GL_DYNAMIC_DRAW)
+        @test length(ib) == length(idx1)
+        @test sizeof(ib) == sizeof(idx1)
+        @test GL.get_data(ib) == idx1
+
+        GL.set_data!(ib, idx2)
+        @test length(ib) == length(idx2)
+        @test sizeof(ib) == sizeof(idx2)
+        @test GL.get_data(ib) == idx2
+
+        GL.set_data!(ib, idx3)
+        @test length(ib) == length(idx3)
+        @test sizeof(ib) == sizeof(idx3)
+        @test GL.get_data(ib) == idx3
+    end
+end
+
+@testset "VertexBuffer creation, update, read" begin
+    in_gl_ctx() do
+        v1 = rand(Float32, 3, 1)
+        v2 = rand(Float32, 3, 4)
+        v3 = rand(Float32, 3, 2)
+
+        layout = GL.BufferLayout([
+            GL.BufferElement(SVector{3, Float32}, "position")])
+        vb = GL.VertexBuffer(v1, layout; usage=GL_DYNAMIC_DRAW)
+        @test length(vb) == length(v1)
+        @test sizeof(vb) == sizeof(v1)
+        @test GL.get_data(vb) == reshape(v1, :)
+
+        GL.set_data!(vb, v2)
+        @test length(vb) == length(v2)
+        @test sizeof(vb) == sizeof(v2)
+        @test GL.get_data(vb) == reshape(v2, :)
+
+        GL.set_data!(vb, v3)
+        @test length(vb) == length(v3)
+        @test sizeof(vb) == sizeof(v3)
+        @test GL.get_data(vb) == reshape(v3, :)
     end
 end
