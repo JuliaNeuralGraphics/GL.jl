@@ -73,8 +73,8 @@ function create_program(shaders)
 
     succ = @gl_check(@ref(glGetProgramiv(id, GL_LINK_STATUS, Ref{Int32})))
     if succ == GL_FALSE
-        @gl_check(glDeleteProgram(id))
         error_log = get_info_log(id)
+        @gl_check(glDeleteProgram(id))
         error("Failed to link shader program: \n$error_log")
     end
 
