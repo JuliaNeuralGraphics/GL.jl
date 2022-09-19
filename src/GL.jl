@@ -160,7 +160,7 @@ end
 
 function Context(
     title; width = -1, height = -1, fullscreen::Bool = false,
-    vsync::Bool = true, resizable::Bool = true,
+    vsync::Bool = true, resizable::Bool = true, visible::Bool = true
 )
     if fullscreen && (width != -1 || height != -1)
         error("You can specify either `fullscreen` or `width` & `height` parameters.")
@@ -169,6 +169,7 @@ function Context(
         error("You need to specify either `fullscreen` or `width` & `height` parameters.")
     end
 
+    glfwWindowHint(GLFW_VISIBLE, visible)
     if fullscreen
         glfwWindowHint(GLFW_RESIZABLE, false)
         monitor = glfwGetPrimaryMonitor()
