@@ -1,7 +1,4 @@
 struct Line
-    from::SVector{3, Float32}
-    to::SVector{3, Float32}
-
     program::ShaderProgram
     va::VertexArray
 end
@@ -13,7 +10,14 @@ function Line(from::SVec3f0, to::SVec3f0; program = get_program(Line))
     layout = BufferLayout([BufferElement(SVec3f0, "position")])
     vb = VertexBuffer(vertices, layout)
     ib = IndexBuffer(indices; primitive_type=GL_LINES)
-    Line(from, to, program, VertexArray(ib, vb))
+    Line(program, VertexArray(ib, vb))
+end
+
+function Line(vertices::Vector{SVec3f0}, indices::Vector{UInt32}; program = get_program(Line))
+    layout = BufferLayout([BufferElement(SVec3f0, "position")])
+    vb = VertexBuffer(vertices, layout)
+    ib = IndexBuffer(indices, primitive_type=GL_LINES)
+    Line(program, VertexArray(ib, vb))
 end
 
 function get_program(::Type{Line})
