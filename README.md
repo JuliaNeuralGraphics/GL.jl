@@ -21,6 +21,7 @@ This is caused by Julia's `libstdc++.so`.
 
 To fix this, in the folder with Julia, rename all `/julia/lib/libstdc++.so*` to `/julia/lib/libstdc++.so*.bak`.
 
+This is a known issue: [link](https://github.com/JuliaGL/GLFW.jl/issues/198).
 
 
 ```
