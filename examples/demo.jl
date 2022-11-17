@@ -9,7 +9,7 @@ function main()
     context = GL.Context("でも"; width=1280, height=960)
     GL.set_resize_callback!(context, GL.resize_callback)
 
-    bbox = GL.BBox(zeros(SVector{3, Float32}), ones(SVector{3, Float32}))
+    bbox = GL.Box(zeros(SVector{3, Float32}), ones(SVector{3, Float32}))
     P = SMatrix{4, 4, Float32}(I)
     V = SMatrix{4, 4, Float32}(I)
 

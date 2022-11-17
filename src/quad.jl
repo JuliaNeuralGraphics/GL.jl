@@ -14,7 +14,7 @@ function RenderSurface(; width::Integer, height::Integer)
     texture = Texture(width, height; internal_format=GL_RGB32F, type=GL_FLOAT)
     program = get_program(RenderSurface)
     bind(program)
-    upload_uniform(program, "u_Textures[0]", 0)
+    upload_uniform(program, "u_Texture", 0)
     unbind(program)
 
     va = get_quad_va()

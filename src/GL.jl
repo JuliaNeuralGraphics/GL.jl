@@ -130,6 +130,7 @@ include("buffers.jl")
 include("framebuffer.jl")
 include("quad.jl")
 include("bounding_box.jl")
+include("voxel.jl")
 include("plane.jl")
 include("line.jl")
 include("frustum.jl")
@@ -186,9 +187,11 @@ function Context(
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
     #enable depth buffer
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_TRUE);
-    glClearDepth(1.0f0);
+    glEnable(GL_DEPTH_TEST)
+    glDepthMask(GL_TRUE)
+    glClearDepth(1.0f0)
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     imgui_ctx = CImGui.CreateContext()
     CImGui.StyleColorsDark()
@@ -204,6 +207,10 @@ function Context(
     CImGui.ImGuiOpenGLBackend.init(gl_ctx)
     Context(window, imgui_ctx, glfw_ctx, gl_ctx, width, height)
 end
+
+enable_blend = glEnable(GL_BLEND)
+
+disable_blend = glDisable(GL_BLEND)
 
 enable_depth() = glEnable(GL_DEPTH_TEST)
 
