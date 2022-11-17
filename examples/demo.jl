@@ -17,15 +17,25 @@ function main()
     last_time = time()
     elapsed_time = 0.0
 
+    voxels_data = Float32[
+        0f0, 0f0, 0f0, 1f0, 0.1f0,
+        0.2f0, 0f0, 0f0, 0.5f0, 0.1f0,
+        0.2f0, 0.2f0, 0f0, 0f0, 0.05f0]
+    voxels = GL.Voxels(voxels_data)
+
+    GL.enable_blend()
+
     GL.render_loop(context; destroy_context=false) do
         GL.imgui_begin(context)
         GL.clear()
         GL.set_clear_color(0.2, 0.2, 0.2, 1.0)
 
-        bmin = zeros(SVector{3, Float32}) .- Float32(delta_time) * 5f0
-        bmax = ones(SVector{3, Float32}) .- Float32(delta_time) * 5f0
-        GL.update_corners!(bbox, bmin, bmax)
-        GL.draw(bbox, P, V)
+        # bmin = zeros(SVector{3, Float32}) .- Float32(delta_time) * 5f0
+        # bmax = ones(SVector{3, Float32}) .- Float32(delta_time) * 5f0
+        # GL.update_corners!(bbox, bmin, bmax)
+        # GL.draw(bbox, P, V)
+
+        GL.draw_instanced(voxels, P, V)
 
         CImGui.Begin("UI")
         CImGui.Text("HI!")

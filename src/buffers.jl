@@ -3,10 +3,11 @@ mutable struct BufferElement{T}
     name::String
     offset::UInt32
     normalized::Bool
+    divisor::UInt32
 end
 
-function BufferElement(type, name::String, normalized::Bool = false)
-    BufferElement(type, name, zero(UInt32), normalized)
+function BufferElement(type, name::String; normalized::Bool = false, divisor = 0)
+    BufferElement(type, name, zero(UInt32), normalized, UInt32(divisor))
 end
 
 Base.sizeof(b::BufferElement) = sizeof(b.type)
@@ -155,8 +156,8 @@ end
 function VertexArray(ib::IndexBuffer, vb::VertexBuffer)
     id = @gl_check(@ref(glGenVertexArrays(1, Ref{UInt32})))
     va = VertexArray(id, ib, vb, zero(UInt32))
-    set_index_buffer(va)
-    set_vertex_buffer(va)
+    set_index_buffer!(va)
+    set_vertex_buffer!(va)
     va
 end
 
@@ -167,26 +168,31 @@ end
 
 unbind(::VertexArray) = @gl_check(glBindVertexArray(0))
 
-function set_index_buffer(va::VertexArray)
+function set_index_buffer!(va::VertexArray)
     bind(va)
     bind(va.index_buffer)
     unbind(va)
 end
 
-function set_vertex_buffer(va::VertexArray)
+set_vertex_buffer!(va::VertexArray) = set_vertex_buffer!(va, va.vertex_buffer)
+
+function set_vertex_buffer!(va::VertexArray, vb::VertexBuffer)
     bind(va)
-    bind(va.vertex_buffer)
-    for el in va.vertex_buffer.layout.elements
-        set_pointer!(va, va.vertex_buffer.layout, el)
+    bind(vb)
+    for el in vb.layout.elements
+        set_pointer!(va, vb.layout, el)
     end
     unbind(va)
 end
 
 function set_pointer!(va::VertexArray, layout::BufferLayout, el::BufferElement)
+    nn = ifelse(el.normalized, GL_TRUE, GL_FALSE)
     @gl_check(glEnableVertexAttribArray(va.vb_id))
     @gl_check(glVertexAttribPointer(
-        va.vb_id, length(el), gl_eltype(el), el.normalized ? GL_TRUE : GL_FALSE,
+        va.vb_id, length(el), gl_eltype(el), nn,
         layout.stride, Ptr{Cvoid}(Int64(el.offset))))
+
+    @gl_check(glVertexAttribDivisor(va.vb_id, el.divisor))
     va.vb_id += 1
 end
 
@@ -194,6 +200,12 @@ function draw(va::VertexArray)
     @gl_check(glDrawElements(
         va.index_buffer.primitive_type, length(va.index_buffer),
         GL_UNSIGNED_INT, C_NULL))
+end
+
+function draw_instanced(va::VertexArray, instances)
+    @gl_check(glDrawElementsInstanced(
+        va.index_buffer.primitive_type,
+        length(va.index_buffer), GL_UNSIGNED_INT, C_NULL, instances))
 end
 
 function delete!(va::VertexArray)

@@ -36,8 +36,7 @@ function _box_corners_to_buffer(bmin::SVec3f0, bmax::SVec3f0)
         SVec3f0(bmax[1], bmin[2], bmin[3]),
         SVec3f0(bmax[1], bmin[2], bmax[3]),
         SVec3f0(bmax[1], bmax[2], bmin[3]),
-        bmax,
-    ]
+        bmax]
 end
 
 function draw(
