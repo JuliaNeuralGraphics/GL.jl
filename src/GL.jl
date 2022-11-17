@@ -208,9 +208,9 @@ function Context(
     Context(window, imgui_ctx, glfw_ctx, gl_ctx, width, height)
 end
 
-enable_blend = glEnable(GL_BLEND)
+enable_blend() = glEnable(GL_BLEND)
 
-disable_blend = glDisable(GL_BLEND)
+disable_blend() = glDisable(GL_BLEND)
 
 enable_depth() = glEnable(GL_DEPTH_TEST)
 
