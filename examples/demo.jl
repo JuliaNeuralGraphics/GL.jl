@@ -24,7 +24,7 @@ function main()
     voxels_data_2 = Float32[
         0f0, 0f0, 0f0, 1f0, 0.1f0,
         0.2f0, 0f0, 0f0, 0.5f0, 0.1f0]
-    voxels = GL.Voxels(voxels_data)
+    voxels = GL.Voxels(Float32[])
 
     GL.enable_blend()
 
@@ -60,6 +60,7 @@ function main()
         true
     end
 
+    GL.delete!(voxels)
     GL.delete!(bbox)
     GL.delete!(context)
 end

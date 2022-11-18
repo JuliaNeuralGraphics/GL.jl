@@ -53,11 +53,30 @@ function update!(voxels::Voxels, new_data::Vector{Float32})
     data_buffer = VertexBuffer(new_data, voxels.data_buffer.layout)
 
     delete!(voxels.data_buffer)
-    voxels.va.vb_id = voxels.data_vb_id
 
+    voxels.va.vb_id = voxels.data_vb_id
     set_vertex_buffer!(voxels.va, data_buffer)
+
     voxels.data_buffer = data_buffer
     voxels.n_voxels = n_voxels
+end
+
+function draw_instanced(voxels::Voxels, P::SMat4f0, V::SMat4f0)
+    voxels.n_voxels == 0 && return
+
+    bind(voxels.program)
+    bind(voxels.va)
+
+    upload_uniform(voxels.program, "proj", P)
+    upload_uniform(voxels.program, "view", V)
+    draw_instanced(voxels.va, voxels.n_voxels)
+    nothing
+end
+
+function delete!(voxels::Voxels; with_program::Bool = false)
+    delete!(voxels.va)
+    delete!(voxels.data_buffer)
+    with_program && delete!(voxels.program)
 end
 
 function get_program(::Type{Voxels})
@@ -97,22 +116,4 @@ function get_program(::Type{Voxels})
     ShaderProgram((
         Shader(GL_VERTEX_SHADER, vertex_shader_code),
         Shader(GL_FRAGMENT_SHADER, fragment_shader_code)))
-end
-
-function draw_instanced(voxels::Voxels, P::SMat4f0, V::SMat4f0)
-    voxels.n_voxels == 0 && return
-
-    bind(voxels.program)
-    bind(voxels.va)
-
-    upload_uniform(voxels.program, "proj", P)
-    upload_uniform(voxels.program, "view", V)
-    draw_instanced(voxels.va, voxels.n_voxels)
-    nothing
-end
-
-function delete!(voxels::Voxels; with_program::Bool = false)
-    delete!(voxels.va)
-    delete!(voxels.data_buffer)
-    with_program && delete!(voxels.program)
 end
