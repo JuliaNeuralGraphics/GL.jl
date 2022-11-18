@@ -1,7 +1,8 @@
-struct Voxels
+mutable struct Voxels
     program::ShaderProgram
     va::VertexArray
     data_buffer::VertexBuffer
+    data_vb_id::Int
     n_voxels::Int
 end
 
@@ -41,8 +42,22 @@ function Voxels(data::Vector{Float32})
         0, 5, 1,
     ]
     va = VertexArray(IndexBuffer(indices), vertex_buffer)
+    data_vb_id = va.vb_id
     set_vertex_buffer!(va, data_buffer)
-    Voxels(program, va, data_buffer, n_voxels)
+    Voxels(program, va, data_buffer, data_vb_id, n_voxels)
+end
+
+function update!(voxels::Voxels, new_data::Vector{Float32})
+    @assert length(new_data) % 5 == 0
+    n_voxels = length(new_data) ÷ 5
+    data_buffer = VertexBuffer(new_data, voxels.data_buffer.layout)
+
+    delete!(voxels.data_buffer)
+    voxels.va.vb_id = voxels.data_vb_id
+
+    set_vertex_buffer!(voxels.va, data_buffer)
+    voxels.data_buffer = data_buffer
+    voxels.n_voxels = n_voxels
 end
 
 function get_program(::Type{Voxels})

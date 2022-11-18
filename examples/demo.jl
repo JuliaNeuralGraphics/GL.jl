@@ -21,6 +21,9 @@ function main()
         0f0, 0f0, 0f0, 1f0, 0.1f0,
         0.2f0, 0f0, 0f0, 0.5f0, 0.1f0,
         0.2f0, 0.2f0, 0f0, 0f0, 0.05f0]
+    voxels_data_2 = Float32[
+        0f0, 0f0, 0f0, 1f0, 0.1f0,
+        0.2f0, 0f0, 0f0, 0.5f0, 0.1f0]
     voxels = GL.Voxels(voxels_data)
 
     GL.enable_blend()
@@ -36,6 +39,12 @@ function main()
         # GL.draw(bbox, P, V)
 
         GL.draw_instanced(voxels, P, V)
+
+        if 2 < elapsed_time < 4
+            GL.update!(voxels, voxels_data_2)
+        elseif elapsed_time > 4
+            GL.update!(voxels, voxels_data)
+        end
 
         CImGui.Begin("UI")
         CImGui.Text("HI!")
